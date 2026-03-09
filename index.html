@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mi Tiendita — Ventas</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0f0e0c;
+      --surface: #1a1916;
+      --surface2: #242220;
+      --border: #2e2c29;
+      --accent: #f5a623;
+      --accent2: #e8421a;
+      --green: #3ecf8e;
+      --text: #f0ece4;
+      --muted: #7a7570;
+      --danger: #e8421a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      position: fixed; top: 0; left: 0;
+      width: 220px; height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      padding: 28px 20px;
+      z-index: 100;
+    }
+    .logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800; font-size: 1.1rem;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+    .logo span { color: var(--text); font-weight: 400; }
+    .logo-sub { font-size: .72rem; color: var(--muted); margin-bottom: 36px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 8px;
+      cursor: pointer; font-size: .88rem; font-weight: 500;
+      color: var(--muted); margin-bottom: 4px;
+      transition: all .2s; border: none; background: none; width: 100%; text-align: left;
+    }
+    .nav-item:hover { background: var(--surface2); color: var(--text); }
+    .nav-item.active { background: var(--accent); color: #000; font-weight: 600; }
+    .nav-icon { font-size: 1.1rem; }
+    .sidebar-footer {
+      margin-top: auto;
+      font-size: .72rem; color: var(--muted);
+      padding-top: 20px; border-top: 1px solid var(--border);
+    }
+
+    /* ── MAIN ── */
+    .main { margin-left: 220px; padding: 36px 40px; }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ── HEADER ── */
+    .page-header { margin-bottom: 32px; }
+    .page-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.9rem; font-weight: 800;
+      letter-spacing: -1px; line-height: 1;
+    }
+    .page-title span { color: var(--accent); }
+    .page-sub { font-size: .85rem; color: var(--muted); margin-top: 6px; }
+
+    /* ── STATS ── */
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 16px; margin-bottom: 36px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px;
+      position: relative; overflow: hidden;
+    }
+    .stat-card::before {
+      content: ''; position: absolute;
+      top: 0; left: 0; right: 0; height: 2px;
+    }
+    .stat-card.orange::before { background: var(--accent); }
+    .stat-card.red::before { background: var(--accent2); }
+    .stat-card.green::before { background: var(--green); }
+    .stat-card.blue::before { background: #5b8dee; }
+    .stat-label { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 8px; }
+    .stat-value {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.8rem; font-weight: 800;
+    }
+    .stat-card.orange .stat-value { color: var(--accent); }
+    .stat-card.red .stat-value { color: var(--accent2); }
+    .stat-card.green .stat-value { color: var(--green); }
+    .stat-card.blue .stat-value { color: #5b8dee; }
+    .stat-hint { font-size: .75rem; color: var(--muted); margin-top: 4px; }
+
+    /* ── FORM CARD ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px; padding: 28px;
+      margin-bottom: 24px;
+    }
+    .card-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem; font-weight: 700;
+      margin-bottom: 22px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full { grid-column: 1 / -1; }
+    label { font-size: .78rem; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: .5px; }
+    input, select, textarea {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 14px;
+      color: var(--text); font-size: .9rem;
+      font-family: 'DM Sans', sans-serif;
+      transition: border .2s;
+      outline: none;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+    select option { background: var(--surface2); }
+    textarea { resize: vertical; min-height: 70px; }
+
+    /* ── BUTTONS ── */
+    .btn-row { display: flex; gap: 12px; margin-top: 22px; align-items: center; }
+    .btn {
+      padding: 10px 22px; border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 600; font-size: .88rem;
+      cursor: pointer; border: none; transition: all .2s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .btn-primary { background: var(--accent); color: #000; }
+    .btn-primary:hover { background: #f9b84a; transform: translateY(-1px); }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+    .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+    .btn-danger:hover { background: var(--danger); color: #fff; }
+    .btn-sm { padding: 6px 14px; font-size: .8rem; }
+
+    /* ── TABLE ── */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: .87rem; }
+    thead th {
+      text-align: left; padding: 12px 16px;
+      font-size: .72rem; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .8px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 500;
+    }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background .15s; }
+    tbody tr:hover { background: var(--surface2); }
+    tbody td { padding: 13px 16px; }
+    .badge {
+      display: inline-block; padding: 3px 10px;
+      border-radius: 20px; font-size: .75rem; font-weight: 600;
+    }
+    .badge-green { background: rgba(62,207,142,.15); color: var(--green); }
+    .badge-orange { background: rgba(245,166,35,.15); color: var(--accent); }
+    .badge-red { background: rgba(232,66,26,.15); color: var(--accent2); }
+    .badge-blue { background: rgba(91,141,238,.15); color: #5b8dee; }
+    .badge-purple { background: rgba(150,100,220,.15); color: #a855f7; }
+
+    /* ── EMPTY STATE ── */
+    .empty {
+      text-align: center; padding: 60px 20px;
+      color: var(--muted);
+    }
+    .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+    .empty-text { font-size: .9rem; }
+
+    /* ── FILTERS ── */
+    .filter-row {
+      display: flex; gap: 12px; align-items: center;
+      margin-bottom: 20px; flex-wrap: wrap;
+    }
+    .filter-row input, .filter-row select { flex: 1; min-width: 160px; }
+    .search-wrap { position: relative; flex: 2; }
+    .search-wrap input { padding-left: 36px; width: 100%; }
+    .search-icon {
+      position: absolute; left: 12px; top: 50%;
+      transform: translateY(-50%); color: var(--muted); font-size: .9rem;
+    }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; bottom: 28px; right: 28px;
+      background: var(--green); color: #000;
+      padding: 12px 22px; border-radius: 10px;
+      font-weight: 600; font-size: .88rem;
+      opacity: 0; transform: translateY(10px);
+      transition: all .3s; pointer-events: none;
+      z-index: 999;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+    #toast.error { background: var(--danger); color: #fff; }
+
+    /* ── MODAL ── */
+    .modal-bg {
+      display: none; position: fixed;
+      inset: 0; background: rgba(0,0,0,.7);
+      z-index: 200; align-items: center; justify-content: center;
+    }
+    .modal-bg.open { display: flex; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 32px;
+      width: 480px; max-width: 95vw;
+      animation: slideUp .3s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.2rem; font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    /* ── RESUMEN CHART ── */
+    .chart-bar-wrap { margin-top: 16px; }
+    .bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+    .bar-label { font-size: .8rem; color: var(--muted); width: 90px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bar-track { flex: 1; background: var(--surface2); border-radius: 4px; height: 10px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; background: var(--accent); transition: width .6s ease; }
+    .bar-amount { font-size: .8rem; color: var(--text); font-weight: 600; width: 80px; text-align: right; }
+
+    /* ── INVENTARIO ── */
+    .stock-low { color: var(--accent2); font-weight: 600; }
+    .stock-ok { color: var(--green); }
+
+    /* ── BOTTOM NAV (móvil) ── */
+    .bottom-nav {
+      display: none;
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      z-index: 100;
+      padding: 6px 0 env(safe-area-inset-bottom, 6px);
+    }
+    .bottom-nav-inner {
+      display: flex; justify-content: space-around; align-items: center;
+    }
+    .bottom-nav-item {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      padding: 6px 10px; border-radius: 10px;
+      cursor: pointer; border: none; background: none;
+      color: var(--muted); font-size: .65rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .4px;
+      transition: all .2s; min-width: 52px;
+    }
+    .bottom-nav-item .bnav-icon { font-size: 1.3rem; line-height: 1; }
+    .bottom-nav-item.active { color: var(--accent); }
+    .bottom-nav-item.active .bnav-icon { transform: scale(1.1); }
+
+    @media (max-width: 700px) {
+      .sidebar { display: none; }
+      .bottom-nav { display: block; }
+      .main { margin-left: 0; padding: 20px 14px 90px; }
+      .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+      .stat-card { padding: 14px; }
+      .stat-value { font-size: 1.4rem; }
+      .form-grid, .form-grid.three { grid-template-columns: 1fr; }
+      .card { padding: 18px 14px; }
+      .page-title { font-size: 1.5rem; }
+      .filter-row { flex-direction: column; }
+      .filter-row input, .filter-row select { min-width: 100%; }
+      .search-wrap { width: 100%; }
+      .btn-row { flex-wrap: wrap; }
+      .btn { flex: 1; justify-content: center; }
+      /* Tablas en móvil: scroll horizontal */
+      .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      table { min-width: 520px; }
+      /* Dashboard gráficas: una columna */
+      #page-dashboard > div[style*="grid-template-columns:1fr 1fr"] {
+        display: flex !important; flex-direction: column !important;
+      }
+      /* Líneas de venta: reorganizar */
+      #lineas-venta > div { grid-template-columns: 1fr 60px 90px 36px !important; }
+      .page-header { margin-bottom: 20px; }
+      #toast { bottom: 80px; right: 14px; left: 14px; text-align: center; }
+    }
+
+    @media (min-width: 701px) and (max-width: 1000px) {
+      .sidebar { width: 64px; padding: 20px 10px; }
+      .sidebar .logo, .sidebar .logo-sub, .sidebar-footer, .nav-item span { display: none; }
+      .nav-item { justify-content: center; padding: 12px; }
+      .main { margin-left: 64px; padding: 24px 20px; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .form-grid.three { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">Mi <span>Tiendita</span></div>
+  <div class="logo-sub">Sistema de ventas</div>
+  <button class="nav-item active" onclick="showPage('dashboard')">
+    <span class="nav-icon">📊</span><span>Dashboard</span>
+  </button>
+  <button class="nav-item" onclick="showPage('nueva-venta')">
+    <span class="nav-icon">🛒</span><span>Nueva Venta</span>
+  </button>
+  <button class="nav-item" onclick="showPage('ventas')">
+    <span class="nav-icon">📋</span><span>Ventas</span>
+  </button>
+  <button class="nav-item" onclick="showPage('inventario')">
+    <span class="nav-icon">📦</span><span>Inventario</span>
+  </button>
+  <button class="nav-item" onclick="showPage('clientes')">
+    <span class="nav-icon">👥</span><span>Clientes</span>
+  </button>
+  <div class="sidebar-footer">
+    <button class="btn btn-ghost btn-sm" onclick="exportarDatos()" style="width:100%;margin-bottom:6px;justify-content:center">💾 Exportar datos</button>
+    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('importar-input').click()" style="width:100%;justify-content:center">📂 Importar datos</button>
+    <input type="file" id="importar-input" accept=".json" style="display:none" onchange="importarDatos(this)"/>
+    <div style="margin-top:10px;text-align:center">v1.0 — Mi Tiendita</div>
+  </div>
+</aside>
+
+<main class="main">
+
+  <!-- ══════════ DASHBOARD ══════════ -->
+  <div class="page active" id="page-dashboard">
+    <div class="page-header">
+      <div class="page-title">Dashboard <span>📊</span></div>
+      <div class="page-sub">Resumen de tu tiendita hoy</div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card orange">
+        <div class="stat-label">Ventas hoy</div>
+        <div class="stat-value" id="stat-hoy">S/0</div>
+        <div class="stat-hint" id="stat-hoy-count">0 transacciones</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">Ventas este mes</div>
+        <div class="stat-value" id="stat-mes">S/0</div>
+        <div class="stat-hint" id="stat-mes-count">0 transacciones</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-label">Productos en stock</div>
+        <div class="stat-value" id="stat-productos">0</div>
+        <div class="stat-hint" id="stat-stock-bajo">0 con stock bajo</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">Total clientes</div>
+        <div class="stat-value" id="stat-clientes">0</div>
+        <div class="stat-hint">registrados</div>
+      </div>
+    </div>
+    <!-- Fila fiados -->
+    <div style="margin-bottom:24px;">
+      <div class="card" style="border-left:3px solid var(--accent2);margin-bottom:0">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+          <div>
+            <div class="stat-label" style="margin-bottom:4px;">📝 Total fiado pendiente</div>
+            <div style="font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;color:var(--accent2)" id="stat-fiado-total">S/0.00</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="showPage('clientes');document.getElementById('filtro-fiado').checked=true;renderClientes()">Ver fiados →</button>
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;" class="hide-this-div">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+      <div class="card">
+        <div class="card-title">🏆 Productos más vendidos</div>
+        <div id="chart-productos" class="chart-bar-wrap">
+          <div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Sin datos aún</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">💳 Métodos de pago</div>
+        <div id="chart-pagos" class="chart-bar-wrap">
+          <div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Sin datos aún</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:0">
+      <div class="card-title">🕐 Últimas ventas</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Fecha</th><th>Productos</th><th>Cliente</th><th>Pago</th><th>Total</th></tr></thead>
+          <tbody id="tabla-recientes"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ NUEVA VENTA ══════════ -->
+  <div class="page" id="page-nueva-venta">
+    <div class="page-header">
+      <div class="page-title">Nueva <span>Venta</span></div>
+      <div class="page-sub">Registra una venta nueva</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🛒 Detalle de la venta</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Fecha y hora</label>
+          <input type="datetime-local" id="venta-fecha"/>
+        </div>
+        <div class="form-group">
+          <label>Cliente (opcional)</label>
+          <select id="venta-cliente">
+            <option value="">— Sin cliente —</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Líneas de productos -->
+      <div style="margin-top:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <label style="font-size:.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Productos</label>
+          <button class="btn btn-ghost btn-sm" onclick="agregarLinea()">+ Agregar producto</button>
+        </div>
+        <div id="lineas-venta"></div>
+        <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:16px;display:flex;justify-content:flex-end;">
+          <div style="text-align:right;">
+            <div style="font-size:.8rem;color:var(--muted);margin-bottom:4px;">TOTAL</div>
+            <div style="font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:var(--accent)">S/<span id="total-venta">0.00</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">💳 Pago y notas</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Método de pago</label>
+          <select id="venta-pago">
+            <option value="efectivo">💵 Efectivo</option>
+            <option value="transferencia">📱 Transferencia</option>
+            <option value="tarjeta">💳 Tarjeta</option>
+            <option value="yape">💜 Yape/Plin</option>
+            <option value="fiado">📝 Fiado</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="venta-estado">
+            <option value="completada">✅ Completada</option>
+            <option value="pendiente">⏳ Pendiente</option>
+            <option value="cancelada">❌ Cancelada</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>Notas</label>
+          <textarea id="venta-notas" placeholder="Observaciones de la venta..."></textarea>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="guardarVenta()">💾 Guardar venta</button>
+        <button class="btn btn-ghost" onclick="limpiarVenta()">🗑 Limpiar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ VENTAS ══════════ -->
+  <div class="page" id="page-ventas">
+    <div class="page-header">
+      <div class="page-title">Historial de <span>Ventas</span></div>
+      <div class="page-sub">Todas tus ventas registradas</div>
+    </div>
+    <div class="card">
+      <div class="filter-row">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="filtro-venta" placeholder="Buscar por producto o cliente..." oninput="renderVentas()"/>
+        </div>
+        <select id="filtro-pago" onchange="renderVentas()">
+          <option value="">Todos los pagos</option>
+          <option value="efectivo">Efectivo</option>
+          <option value="transferencia">Transferencia</option>
+          <option value="tarjeta">Tarjeta</option>
+          <option value="yape">Yape/Plin</option>
+          <option value="fiado">Fiado</option>
+        </select>
+        <select id="filtro-estado" onchange="renderVentas()">
+          <option value="">Todos los estados</option>
+          <option value="completada">Completada</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="cancelada">Cancelada</option>
+        </select>
+        <input type="date" id="filtro-fecha" onchange="renderVentas()" style="flex:1;min-width:140px;"/>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Fecha</th><th>Productos</th><th>Cliente</th>
+              <th>Pago</th><th>Estado</th><th>Total</th><th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-ventas"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ INVENTARIO ══════════ -->
+  <div class="page" id="page-inventario">
+    <div class="page-header">
+      <div class="page-title">Inventario <span>📦</span></div>
+      <div class="page-sub">Productos y stock de tu tiendita</div>
+    </div>
+    <div class="card">
+      <div class="card-title">➕ Agregar producto</div>
+      <div class="form-grid three">
+        <div class="form-group">
+          <label>Nombre del producto</label>
+          <input type="text" id="prod-nombre" placeholder="Ej: Coca-Cola 600ml"/>
+        </div>
+        <div class="form-group">
+          <label>Categoría</label>
+          <select id="prod-categoria">
+            <option value="bebidas">🥤 Bebidas</option>
+            <option value="botanas">🍟 Botanas</option>
+            <option value="abarrotes">🛒 Abarrotes</option>
+            <option value="lacteos">🥛 Lácteos</option>
+            <option value="limpieza">🧹 Limpieza</option>
+            <option value="dulces">🍬 Dulces</option>
+            <option value="otro">📦 Otro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Precio de venta (S/)</label>
+          <input type="number" id="prod-precio" placeholder="0.00" min="0" step="0.01"/>
+        </div>
+        <div class="form-group">
+          <label>Stock actual</label>
+          <input type="number" id="prod-stock" placeholder="0" min="0"/>
+        </div>
+        <div class="form-group">
+          <label>Stock mínimo (alerta)</label>
+          <input type="number" id="prod-min" placeholder="5" min="0"/>
+        </div>
+        <div class="form-group">
+          <label>Costo / compra (S/)</label>
+          <input type="number" id="prod-costo" placeholder="0.00" min="0" step="0.01"/>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="guardarProducto()">💾 Guardar producto</button>
+        <button class="btn btn-ghost" onclick="limpiarProducto()">🗑 Limpiar</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="filter-row">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="filtro-prod" placeholder="Buscar producto..." oninput="renderInventario()"/>
+        </div>
+        <select id="filtro-cat" onchange="renderInventario()">
+          <option value="">Todas las categorías</option>
+          <option value="bebidas">Bebidas</option>
+          <option value="botanas">Botanas</option>
+          <option value="abarrotes">Abarrotes</option>
+          <option value="lacteos">Lácteos</option>
+          <option value="limpieza">Limpieza</option>
+          <option value="dulces">Dulces</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Producto</th><th>Categoría</th><th>Precio venta</th><th>Costo</th><th>Stock</th><th>Estado</th><th>Acciones</th></tr>
+          </thead>
+          <tbody id="tabla-inventario"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ CLIENTES ══════════ -->
+  <div class="page" id="page-clientes">
+    <div class="page-header">
+      <div class="page-title">Clientes <span>👥</span></div>
+      <div class="page-sub">Tus clientes registrados</div>
+    </div>
+    <div class="card">
+      <div class="card-title">➕ Agregar cliente</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Nombre completo</label>
+          <input type="text" id="cli-nombre" placeholder="Ej: Juan García"/>
+        </div>
+        <div class="form-group">
+          <label>Teléfono</label>
+          <input type="text" id="cli-tel" placeholder="Ej: 555-123-4567"/>
+        </div>
+        <div class="form-group full">
+          <label>Notas</label>
+          <input type="text" id="cli-notas" placeholder="Ej: cliente frecuente, paga fiado..."/>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="guardarCliente()">💾 Guardar cliente</button>
+        <button class="btn btn-ghost" onclick="limpiarCliente()">🗑 Limpiar</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="search-wrap" style="margin-bottom:16px;">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="filtro-cli" placeholder="Buscar cliente..." oninput="renderClientes()" style="width:100%;"/>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.85rem;color:var(--muted)">
+          <input type="checkbox" id="filtro-fiado" onchange="renderClientes()" style="accent-color:var(--accent2);width:16px;height:16px;"/>
+          Solo mostrar clientes con fiado pendiente
+        </label>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Teléfono</th><th>Compras</th><th>Total gastado</th><th>Fiado pendiente</th><th>Notas</th><th>Acciones</th></tr></thead>
+          <tbody id="tabla-clientes"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- MODAL EDITAR VENTA -->
+<!-- BOTTOM NAV MÓVIL -->
+<nav class="bottom-nav">
+  <div class="bottom-nav-inner">
+    <button class="bottom-nav-item active" onclick="showPage('dashboard', this)">
+      <span class="bnav-icon">📊</span>Inicio
+    </button>
+    <button class="bottom-nav-item" onclick="showPage('nueva-venta', this)">
+      <span class="bnav-icon">🛒</span>Venta
+    </button>
+    <button class="bottom-nav-item" onclick="showPage('ventas', this)">
+      <span class="bnav-icon">📋</span>Historial
+    </button>
+    <button class="bottom-nav-item" onclick="showPage('inventario', this)">
+      <span class="bnav-icon">📦</span>Stock
+    </button>
+    <button class="bottom-nav-item" onclick="showPage('clientes', this)">
+      <span class="bnav-icon">👥</span>Clientes
+    </button>
+  </div>
+</nav>
+
+<div class="modal-bg" id="modal-venta">
+  <div class="modal">
+    <div class="modal-title">✏️ Editar estado de venta</div>
+    <div class="form-group" style="margin-bottom:16px;">
+      <label>Estado</label>
+      <select id="edit-estado">
+        <option value="completada">✅ Completada</option>
+        <option value="pendiente">⏳ Pendiente</option>
+        <option value="cancelada">❌ Cancelada</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:20px;">
+      <label>Notas</label>
+      <textarea id="edit-notas"></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="guardarEditVenta()">Guardar cambios</button>
+      <button class="btn btn-ghost" onclick="cerrarModal('modal-venta')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- LOADING OVERLAY -->
+<div id="loading-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,14,12,.85);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:14px;">
+  <div style="width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite"></div>
+  <div id="loading-msg" style="font-size:.9rem;color:var(--muted)">Cargando...</div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+<script>
+// ═══════════════════════════════════════
+// CONFIGURACIÓN SUPABASE
+// Reemplaza estos dos valores con los tuyos
+// ═══════════════════════════════════════
+const SUPABASE_URL = 'https://rcgbjceodcvstgnceqas.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjZ2JqY2VvZGN2c3RnbmNlcWFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwNzY2OTIsImV4cCI6MjA4ODY1MjY5Mn0.1M9FbL0J0r3OrXrgX_cNxrHC4Zt2HnortoG8ZnRY90w';
+
+// ═══════════════════════════════════════
+// CLIENTE SUPABASE (sin librería externa)
+// ═══════════════════════════════════════
+const supa = {
+  async get(tabla) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${tabla}?order=id`, {
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    });
+    return r.ok ? r.json() : [];
+  },
+  async insert(tabla, datos) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${tabla}`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json', Prefer: 'return=representation' },
+      body: JSON.stringify(datos)
+    });
+    return r.ok ? r.json() : null;
+  },
+  async update(tabla, id, datos) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${tabla}?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json', Prefer: 'return=representation' },
+      body: JSON.stringify(datos)
+    });
+    return r.ok ? r.json() : null;
+  },
+  async delete(tabla, id) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${tabla}?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    });
+    return r.ok;
+  }
+};
+
+// ═══════════════════════════════════════
+// ESTADO EN MEMORIA (cache local)
+// ═══════════════════════════════════════
+let ventas = [];
+let productos = [];
+let clientes = [];
+let _cargando = false;
+
+function mostrarCargando(msg = 'Cargando...') {
+  document.getElementById('loading-overlay').style.display = 'flex';
+  document.getElementById('loading-msg').textContent = msg;
+}
+function ocultarCargando() {
+  document.getElementById('loading-overlay').style.display = 'none';
+}
+
+async function cargarDatos() {
+  mostrarCargando('Conectando con la nube...');
+  try {
+    [ventas, productos, clientes] = await Promise.all([
+      supa.get('ventas'),
+      supa.get('productos'),
+      supa.get('clientes')
+    ]);
+    // Parsear lineas y otros campos JSON almacenados como texto
+    ventas = ventas.map(v => ({
+      ...v,
+      lineas: typeof v.lineas === 'string' ? JSON.parse(v.lineas) : (v.lineas || [])
+    }));
+  } catch(e) {
+    toast('⚠️ Sin conexión, usando datos locales', true);
+    ventas = JSON.parse(localStorage.getItem('ventas') || '[]');
+    productos = JSON.parse(localStorage.getItem('productos') || '[]');
+    clientes = JSON.parse(localStorage.getItem('clientes') || '[]');
+  }
+  ocultarCargando();
+}
+
+// Cache local como respaldo
+function saveLocal() {
+  localStorage.setItem('ventas', JSON.stringify(ventas));
+  localStorage.setItem('productos', JSON.stringify(productos));
+  localStorage.setItem('clientes', JSON.stringify(clientes));
+}
+
+// save() ahora es no-op (cada operación guarda directo en Supabase)
+function save() { saveLocal(); }
+
+// ═══════════════════════════════════════
+// NAVEGACIÓN
+// ═══════════════════════════════════════
+function showPage(id, caller) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.bottom-nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  // Marcar activo en sidebar
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + id + "'")) n.classList.add('active');
+  });
+  // Marcar activo en bottom nav
+  document.querySelectorAll('.bottom-nav-item').forEach(n => {
+    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + id + "'")) n.classList.add('active');
+  });
+  if (id === 'dashboard') renderDashboard();
+  if (id === 'ventas') renderVentas();
+  if (id === 'inventario') renderInventario();
+  if (id === 'clientes') renderClientes();
+  if (id === 'nueva-venta') initNuevaVenta();
+}
+
+// ═══════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════
+function toast(msg, err = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (err ? ' error' : '');
+  setTimeout(() => t.className = '', 2600);
+}
+
+// ═══════════════════════════════════════
+// MODAL
+// ═══════════════════════════════════════
+function cerrarModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// ═══════════════════════════════════════
+// FORMATEO
+// ═══════════════════════════════════════
+function fmt(n) { return Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+function badgePago(p) {
+  const m = { efectivo:'orange', transferencia:'blue', tarjeta:'green', yape:'purple', fiado:'red' };
+  const t = { efectivo:'💵 Efectivo', transferencia:'📱 Transfer.', tarjeta:'💳 Tarjeta', yape:'💜 Yape/Plin', fiado:'📝 Fiado' };
+  return `<span class="badge badge-${m[p]||'orange'}">${t[p]||p}</span>`;
+}
+function badgeEstado(e) {
+  const m = { completada:'green', pendiente:'orange', cancelada:'red' };
+  const t = { completada:'✅ Completada', pendiente:'⏳ Pendiente', cancelada:'❌ Cancelada' };
+  return `<span class="badge badge-${m[e]||'orange'}">${t[e]||e}</span>`;
+}
+
+// ═══════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════
+function renderDashboard() {
+  const hoy = new Date().toDateString();
+  const mesAct = new Date().getMonth();
+  const anioAct = new Date().getFullYear();
+
+  const ventasHoy = ventas.filter(v => new Date(v.fecha).toDateString() === hoy);
+  const ventasMes = ventas.filter(v => {
+    const d = new Date(v.fecha);
+    return d.getMonth() === mesAct && d.getFullYear() === anioAct;
+  });
+
+  const sumHoy = ventasHoy.reduce((a,v) => a + v.total, 0);
+  const sumMes = ventasMes.reduce((a,v) => a + v.total, 0);
+  const stockBajo = productos.filter(p => p.stock <= p.stockMin).length;
+
+  document.getElementById('stat-hoy').textContent = 'S/' + fmt(sumHoy);
+  document.getElementById('stat-hoy-count').textContent = ventasHoy.length + ' transacciones';
+  document.getElementById('stat-mes').textContent = 'S/' + fmt(sumMes);
+  document.getElementById('stat-mes-count').textContent = ventasMes.length + ' transacciones';
+  document.getElementById('stat-productos').textContent = productos.length;
+  document.getElementById('stat-stock-bajo').textContent = stockBajo + ' con stock bajo';
+  document.getElementById('stat-clientes').textContent = clientes.length;
+
+  // Total fiado pendiente
+  const totalFiado = ventas
+    .filter(v => v.metodoPago === 'fiado' && v.estado !== 'cancelada' && !v.fiadoPagado)
+    .reduce((s,v) => s + v.total, 0);
+  document.getElementById('stat-fiado-total').textContent = 'S/' + fmt(totalFiado);
+
+  // Productos más vendidos
+  const conteo = {};
+  ventas.forEach(v => v.lineas.forEach(l => {
+    conteo[l.nombre] = (conteo[l.nombre] || 0) + l.cantidad * l.precio;
+  }));
+  const topProds = Object.entries(conteo).sort((a,b) => b[1]-a[1]).slice(0,5);
+  const maxP = topProds[0]?.[1] || 1;
+  document.getElementById('chart-productos').innerHTML = topProds.length ? topProds.map(([n,v]) =>
+    `<div class="bar-row">
+      <div class="bar-label" title="${n}">${n}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(v/maxP*100).toFixed(0)}%"></div></div>
+      <div class="bar-amount">S/${fmt(v)}</div>
+    </div>`).join('') : '<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Sin datos aún</div></div>';
+
+  // Métodos de pago
+  const pagos = {};
+  ventas.forEach(v => { pagos[v.metodoPago] = (pagos[v.metodoPago]||0) + v.total; });
+  const topPagos = Object.entries(pagos).sort((a,b)=>b[1]-a[1]);
+  const maxPago = topPagos[0]?.[1] || 1;
+  const iconPago = { efectivo:'💵', transferencia:'📱', tarjeta:'💳', yape:'💜', fiado:'📝' };
+  document.getElementById('chart-pagos').innerHTML = topPagos.length ? topPagos.map(([n,v]) =>
+    `<div class="bar-row">
+      <div class="bar-label">${iconPago[n]||'💰'} ${n}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(v/maxPago*100).toFixed(0)}%;background:#3ecf8e"></div></div>
+      <div class="bar-amount">S/${fmt(v)}</div>
+    </div>`).join('') : '<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Sin datos aún</div></div>';
+
+  // Últimas 5 ventas
+  const recientes = [...ventas].sort((a,b) => new Date(b.fecha)-new Date(a.fecha)).slice(0,5);
+  const tbody = document.getElementById('tabla-recientes');
+  tbody.innerHTML = recientes.length ? recientes.map(v => {
+    const cli = clientes.find(c => c.id == v.clienteId);
+    return `<tr>
+      <td>${fmtDate(v.fecha)}</td>
+      <td>${v.lineas.map(l=>`${l.nombre} x${l.cantidad}`).join(', ')}</td>
+      <td>${cli ? cli.nombre : '—'}</td>
+      <td>${badgePago(v.metodoPago)}</td>
+      <td style="font-weight:700;color:var(--accent)">S/${fmt(v.total)}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="5"><div class="empty"><div class="empty-icon">🛒</div><div class="empty-text">Sin ventas registradas</div></div></td></tr>';
+}
+
+// ═══════════════════════════════════════
+// NUEVA VENTA
+// ═══════════════════════════════════════
+let lineas = [];
+
+function initNuevaVenta() {
+  // Fecha actual
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  document.getElementById('venta-fecha').value = now.toISOString().slice(0,16);
+
+  // Clientes en select
+  const sel = document.getElementById('venta-cliente');
+  sel.innerHTML = '<option value="">— Sin cliente —</option>';
+  clientes.forEach(c => sel.innerHTML += `<option value="${c.id}">${c.nombre}</option>`);
+
+  if (lineas.length === 0) agregarLinea();
+  else renderLineas();
+}
+
+function agregarLinea() {
+  lineas.push({ productoId: '', nombre: '', cantidad: 1, precio: 0 });
+  renderLineas();
+}
+
+const catIcon = { bebidas:'🥤', botanas:'🍟', abarrotes:'🛒', lacteos:'🥛', limpieza:'🧹', dulces:'🍬', otro:'📦' };
+
+function renderLineas() {
+  const wrap = document.getElementById('lineas-venta');
+
+  // Categorías que tienen al menos 1 producto, ordenadas
+  const catsUsadas = [...new Set(productos.map(p => p.categoria).filter(Boolean))].sort();
+
+  wrap.innerHTML = lineas.map((l, i) => {
+    const catActual = l.categoria || '';
+
+    // Productos filtrados (si hay categoría elegida, filtrar; si no, mostrar todos)
+    const prodsFiltrados = catActual
+      ? productos.filter(p => (p.categoria || '') === catActual)
+      : productos;
+
+    const catOpts = catsUsadas.map(c =>
+      `<option value="${c}">${catIcon[c]||'📦'} ${c.charAt(0).toUpperCase()+c.slice(1)}</option>`
+    ).join('');
+
+    const prodOpts = prodsFiltrados.map(p =>
+      `<option value="${p.id}">${p.nombre} — S/${fmt(p.precio)} ${p.stock <= (p.stockMin||0) ? '⚠️' : ''}(stock: ${p.stock})</option>`
+    ).join('');
+
+    const subtotal = (l.cantidad * l.precio).toFixed(2);
+    const lbl = (txt) => `<label style="font-size:.72rem;color:var(--muted);letter-spacing:.5px;display:block;margin-bottom:4px">${txt}</label>`;
+
+    return `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;">
+      <div style="display:grid;grid-template-columns:140px 1fr;gap:10px;margin-bottom:10px;">
+        <div>
+          ${lbl('CATEGORÍA')}
+          <select id="cat-sel-${i}" onchange="seleccionarCategoria(${i}, this.value)" style="width:100%">
+            <option value="">— Todas —</option>
+            ${catOpts}
+          </select>
+        </div>
+        <div>
+          ${lbl('PRODUCTO')}
+          <select id="prod-sel-${i}" onchange="seleccionarProducto(${i}, this.value)" style="width:100%">
+            <option value="">— Selecciona producto —</option>
+            ${prodOpts}
+            <option value="__manual__">✏️ Escribir manual</option>
+          </select>
+          ${l.productoId === '__manual__' ? `<input type="text" placeholder="Nombre del producto" value="${l.nombre}"
+            oninput="actualizarLinea(${i},'nombre',this.value)" style="width:100%;margin-top:6px"/>` : ''}
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:80px 110px 1fr 32px;gap:10px;align-items:end;">
+        <div>
+          ${lbl('CANT.')}
+          <input type="number" min="1" placeholder="1" value="${l.cantidad}"
+            oninput="actualizarLinea(${i},'cantidad',this.value)" style="width:100%"/>
+        </div>
+        <div>
+          ${lbl('PRECIO S/')}
+          <input type="number" min="0" step="0.01" placeholder="0.00" value="${l.precio||''}"
+            oninput="actualizarLinea(${i},'precio',this.value)" style="width:100%"/>
+        </div>
+        <div>
+          ${lbl('SUBTOTAL')}
+          <div style="padding:10px 14px;background:var(--surface);border-radius:8px;color:var(--accent);font-weight:700;font-size:.9rem;border:1px solid var(--border)">S/${subtotal}</div>
+        </div>
+        <div style="padding-top:18px">
+          <button class="btn btn-danger btn-sm" onclick="quitarLinea(${i})" ${lineas.length===1?'disabled':''} style="padding:9px 10px">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Restaurar valores seleccionados DESPUÉS de pintar el HTML
+  lineas.forEach((l, i) => {
+    const catSel = document.getElementById('cat-sel-' + i);
+    const prodSel = document.getElementById('prod-sel-' + i);
+    if (catSel) catSel.value = l.categoria || '';
+    if (prodSel) prodSel.value = l.productoId || '';
+  });
+
+  calcularTotal();
+}
+
+function seleccionarCategoria(i, cat) {
+  lineas[i].categoria = cat;
+  lineas[i].productoId = '';
+  lineas[i].nombre = '';
+  lineas[i].precio = 0;
+  renderLineas();
+}
+
+function seleccionarProducto(i, prodId) {
+  if (prodId === '__manual__') {
+    lineas[i] = { ...lineas[i], productoId: '__manual__', nombre: '', precio: lineas[i].precio || 0 };
+  } else if (prodId === '') {
+    lineas[i] = { ...lineas[i], productoId: '', nombre: '', precio: 0 };
+  } else {
+    const p = productos.find(p => p.id == prodId);
+    if (p) lineas[i] = { ...lineas[i], productoId: p.id, nombre: p.nombre, precio: p.precio, categoria: p.categoria };
+  }
+  renderLineas();
+}
+
+function actualizarLinea(i, campo, val) {
+  lineas[i][campo] = campo === 'nombre' ? val : parseFloat(val)||0;
+  calcularTotal();
+}
+
+function quitarLinea(i) {
+  lineas.splice(i, 1);
+  renderLineas();
+}
+
+function calcularTotal() {
+  const total = lineas.reduce((s, l) => s + (l.cantidad * l.precio), 0);
+  document.getElementById('total-venta').textContent = fmt(total);
+}
+
+async function guardarVenta() {
+  const fecha = document.getElementById('venta-fecha').value;
+  const clienteId = document.getElementById('venta-cliente').value;
+  const metodoPago = document.getElementById('venta-pago').value;
+  const estado = document.getElementById('venta-estado').value;
+  const notas = document.getElementById('venta-notas').value;
+
+  const lineasValidas = lineas.filter(l => l.nombre.trim());
+  if (!lineasValidas.length) { toast('Agrega al menos un producto', true); return; }
+  if (!fecha) { toast('Selecciona una fecha', true); return; }
+
+  const total = lineasValidas.reduce((s,l) => s + l.cantidad * l.precio, 0);
+  const ventaNueva = {
+    fecha, clienteId: clienteId || null, metodoPago, estado, notas,
+    lineas: JSON.stringify(lineasValidas), total
+  };
+
+  mostrarCargando('Guardando venta...');
+  const resultado = await supa.insert('ventas', ventaNueva);
+  if (resultado && resultado[0]) {
+    const v = { ...resultado[0], lineas: lineasValidas };
+    // Descontar stock
+    for (const l of lineasValidas) {
+      const p = productos.find(p => p.nombre.toLowerCase() === l.nombre.toLowerCase());
+      if (p) {
+        const nuevoStock = Math.max(0, (p.stock||0) - l.cantidad);
+        await supa.update('productos', p.id, { stock: nuevoStock });
+        p.stock = nuevoStock;
+      }
+    }
+    ventas.push(v);
+    saveLocal();
+    limpiarVenta();
+    ocultarCargando();
+    toast('✅ Venta guardada correctamente');
+  } else {
+    ocultarCargando();
+    toast('❌ Error al guardar la venta', true);
+  }
+}
+
+function limpiarVenta() {
+  lineas = [];
+  document.getElementById('venta-notas').value = '';
+  document.getElementById('venta-pago').value = 'efectivo';
+  document.getElementById('venta-estado').value = 'completada';
+  initNuevaVenta();
+}
+
+// ═══════════════════════════════════════
+// VENTAS — HISTORIAL
+// ═══════════════════════════════════════
+let editVentaId = null;
+
+function renderVentas() {
+  const q = document.getElementById('filtro-venta').value.toLowerCase();
+  const pago = document.getElementById('filtro-pago').value;
+  const estado = document.getElementById('filtro-estado').value;
+  const fecha = document.getElementById('filtro-fecha').value;
+
+  let filtradas = [...ventas].sort((a,b) => new Date(b.fecha)-new Date(a.fecha));
+  if (q) filtradas = filtradas.filter(v =>
+    v.lineas.some(l => l.nombre.toLowerCase().includes(q)) ||
+    (clientes.find(c=>c.id==v.clienteId)?.nombre||'').toLowerCase().includes(q));
+  if (pago) filtradas = filtradas.filter(v => v.metodoPago === pago);
+  if (estado) filtradas = filtradas.filter(v => v.estado === estado);
+  if (fecha) filtradas = filtradas.filter(v => v.fecha.startsWith(fecha));
+
+  const tbody = document.getElementById('tabla-ventas');
+  tbody.innerHTML = filtradas.length ? filtradas.map((v, i) => {
+    const cli = clientes.find(c => c.id == v.clienteId);
+    return `<tr>
+      <td style="color:var(--muted);font-size:.8rem">#${filtradas.length - i}</td>
+      <td>${fmtDate(v.fecha)}</td>
+      <td style="max-width:200px">${v.lineas.map(l=>`<span style="font-size:.8rem;background:var(--surface2);padding:2px 8px;border-radius:4px;margin:2px;display:inline-block">${l.nombre} x${l.cantidad}</span>`).join('')}</td>
+      <td>${cli ? cli.nombre : '<span style="color:var(--muted)">—</span>'}</td>
+      <td>${badgePago(v.metodoPago)}</td>
+      <td>${badgeEstado(v.estado)}</td>
+      <td style="font-weight:700;color:var(--accent)">S/${fmt(v.total)}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="editarVenta(${v.id})">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="eliminarVenta(${v.id})">🗑</button></td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="8"><div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">No se encontraron ventas</div></div></td></tr>';
+}
+
+function editarVenta(id) {
+  const v = ventas.find(v => v.id === id);
+  if (!v) return;
+  editVentaId = id;
+  document.getElementById('edit-estado').value = v.estado;
+  document.getElementById('edit-notas').value = v.notas || '';
+  document.getElementById('modal-venta').classList.add('open');
+}
+
+async function guardarEditVenta() {
+  const v = ventas.find(v => v.id === editVentaId);
+  if (!v) return;
+  const nuevoEstado = document.getElementById('edit-estado').value;
+  const nuevasNotas = document.getElementById('edit-notas').value;
+  mostrarCargando('Guardando...');
+  await supa.update('ventas', v.id, { estado: nuevoEstado, notas: nuevasNotas });
+  v.estado = nuevoEstado; v.notas = nuevasNotas;
+  saveLocal(); renderVentas();
+  ocultarCargando(); cerrarModal('modal-venta');
+  toast('✅ Venta actualizada');
+}
+
+async function eliminarVenta(id) {
+  if (!confirm('¿Eliminar esta venta?')) return;
+  mostrarCargando('Eliminando...');
+  await supa.delete('ventas', id);
+  ventas = ventas.filter(v => v.id !== id);
+  saveLocal(); renderVentas(); ocultarCargando();
+  toast('🗑 Venta eliminada');
+}
+
+// ═══════════════════════════════════════
+// INVENTARIO
+// ═══════════════════════════════════════
+async function guardarProducto() {
+  const nombre = document.getElementById('prod-nombre').value.trim();
+  const categoria = document.getElementById('prod-categoria').value;
+  const precio = parseFloat(document.getElementById('prod-precio').value)||0;
+  const stock = parseInt(document.getElementById('prod-stock').value)||0;
+  const stockMin = parseInt(document.getElementById('prod-min').value)||5;
+  const costo = parseFloat(document.getElementById('prod-costo').value)||0;
+
+  if (!nombre) { toast('Escribe el nombre del producto', true); return; }
+  if (productos.find(p => p.nombre.toLowerCase() === nombre.toLowerCase())) {
+    toast('Ya existe un producto con ese nombre', true); return;
+  }
+
+  mostrarCargando('Guardando producto...');
+  const resultado = await supa.insert('productos', { nombre, categoria, precio, stock, stockMin, costo });
+  if (resultado && resultado[0]) {
+    productos.push(resultado[0]);
+    saveLocal(); renderInventario(); limpiarProducto();
+    ocultarCargando(); toast('📦 Producto guardado');
+  } else {
+    ocultarCargando(); toast('❌ Error al guardar', true);
+  }
+}
+
+function limpiarProducto() {
+  ['prod-nombre','prod-precio','prod-stock','prod-min','prod-costo'].forEach(id => document.getElementById(id).value = '');
+}
+
+function renderInventario() {
+  const q = document.getElementById('filtro-prod').value.toLowerCase();
+  const cat = document.getElementById('filtro-cat').value;
+
+  let filtrados = [...productos];
+  if (q) filtrados = filtrados.filter(p => p.nombre.toLowerCase().includes(q));
+  if (cat) filtrados = filtrados.filter(p => p.categoria === cat);
+
+  const catIcon = { bebidas:'🥤',botanas:'🍟',abarrotes:'🛒',lacteos:'🥛',limpieza:'🧹',dulces:'🍬',otro:'📦' };
+  const tbody = document.getElementById('tabla-inventario');
+  tbody.innerHTML = filtrados.length ? filtrados.map(p => {
+    const stockBajo = p.stock <= p.stockMin;
+    return `<tr>
+      <td style="font-weight:500">${p.nombre}</td>
+      <td>${catIcon[p.categoria]||'📦'} ${p.categoria}</td>
+      <td style="color:var(--accent);font-weight:600">S/${fmt(p.precio)}</td>
+      <td style="color:var(--muted)">S/${fmt(p.costo)}</td>
+      <td class="${stockBajo?'stock-low':'stock-ok'}">${p.stock} ${stockBajo?'⚠️':''}</td>
+      <td>${stockBajo?'<span class="badge badge-red">Stock bajo</span>':'<span class="badge badge-green">OK</span>'}</td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="editarStock(${p.id})">📦 Stock</button>
+        <button class="btn btn-danger btn-sm" onclick="eliminarProducto(${p.id})">🗑</button>
+      </td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="7"><div class="empty"><div class="empty-icon">📦</div><div class="empty-text">No hay productos</div></div></td></tr>';
+}
+
+async function editarStock(id) {
+  const p = productos.find(p => p.id === id);
+  if (!p) return;
+  const nuevo = prompt(`Stock actual de "${p.nombre}": ${p.stock}\n\nNuevo stock:`);
+  if (nuevo === null) return;
+  const n = parseInt(nuevo);
+  if (isNaN(n)) { toast('Número inválido', true); return; }
+  mostrarCargando('Actualizando stock...');
+  await supa.update('productos', p.id, { stock: n });
+  p.stock = n; saveLocal(); renderInventario(); ocultarCargando();
+  toast(`📦 Stock de "${p.nombre}" actualizado a ${n}`);
+}
+
+async function eliminarProducto(id) {
+  if (!confirm('¿Eliminar este producto?')) return;
+  mostrarCargando('Eliminando...');
+  await supa.delete('productos', id);
+  productos = productos.filter(p => p.id !== id);
+  saveLocal(); renderInventario(); ocultarCargando();
+  toast('🗑 Producto eliminado');
+}
+
+// ═══════════════════════════════════════
+// CLIENTES
+// ═══════════════════════════════════════
+async function guardarCliente() {
+  const nombre = document.getElementById('cli-nombre').value.trim();
+  const tel = document.getElementById('cli-tel').value.trim();
+  const notas = document.getElementById('cli-notas').value.trim();
+  if (!nombre) { toast('Escribe el nombre del cliente', true); return; }
+  mostrarCargando('Guardando cliente...');
+  const resultado = await supa.insert('clientes', { nombre, tel, notas });
+  if (resultado && resultado[0]) {
+    clientes.push(resultado[0]);
+    saveLocal(); renderClientes(); limpiarCliente();
+    ocultarCargando(); toast('👤 Cliente guardado');
+  } else {
+    ocultarCargando(); toast('❌ Error al guardar', true);
+  }
+}
+
+function limpiarCliente() {
+  ['cli-nombre','cli-tel','cli-notas'].forEach(id => document.getElementById(id).value = '');
+}
+
+function renderClientes() {
+  const q = document.getElementById('filtro-cli').value.toLowerCase();
+  const soloFiado = document.getElementById('filtro-fiado') && document.getElementById('filtro-fiado').checked;
+  let filtrados = [...clientes];
+  if (q) filtrados = filtrados.filter(c => c.nombre.toLowerCase().includes(q) || (c.tel||'').includes(q));
+
+  const tbody = document.getElementById('tabla-clientes');
+  let rows = filtrados.map(c => {
+    const ventasCli = ventas.filter(v => v.clienteId == c.id);
+    const totalGastado = ventasCli.reduce((s,v) => s+v.total, 0);
+    const fiadoPendiente = ventasCli
+      .filter(v => v.metodoPago === 'fiado' && v.estado !== 'cancelada' && !v.fiadoPagado)
+      .reduce((s,v) => s+v.total, 0);
+    return { c, ventasCli, totalGastado, fiadoPendiente };
+  });
+
+  if (soloFiado) rows = rows.filter(r => r.fiadoPendiente > 0);
+
+  tbody.innerHTML = rows.length ? rows.map(({c, ventasCli, totalGastado, fiadoPendiente}) => `<tr>
+      <td style="font-weight:500">${c.nombre}</td>
+      <td>${c.tel||'<span style="color:var(--muted)">—</span>'}</td>
+      <td>${ventasCli.length}</td>
+      <td style="color:var(--accent);font-weight:600">S/${fmt(totalGastado)}</td>
+      <td>${fiadoPendiente > 0
+        ? `<span style="color:var(--accent2);font-weight:700">S/${fmt(fiadoPendiente)}</span>
+           <button class="btn btn-sm" style="background:rgba(62,207,142,.15);color:var(--green);border:none;margin-left:8px;padding:3px 10px;font-size:.75rem" onclick="marcarFiadoPagado(${c.id})">✔ Cobrado</button>`
+        : '<span style="color:var(--green);font-size:.8rem">Sin deuda</span>'}</td>
+      <td style="color:var(--muted);font-size:.85rem">${c.notas||'—'}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="eliminarCliente(${c.id})">🗑</button></td>
+    </tr>`).join('') : '<tr><td colspan="7"><div class="empty"><div class="empty-icon">👥</div><div class="empty-text">No hay clientes</div></div></td></tr>';
+}
+
+async function marcarFiadoPagado(clienteId) {
+  if (!confirm('¿Marcar todos los fiados de este cliente como cobrados?')) return;
+  mostrarCargando('Actualizando...');
+  const fiadosPendientes = ventas.filter(v =>
+    v.clienteId == clienteId && v.metodoPago === 'fiado' && !v.fiadoPagado);
+  for (const v of fiadosPendientes) {
+    await supa.update('ventas', v.id, { fiadoPagado: true, estado: 'completada' });
+    v.fiadoPagado = true; v.estado = 'completada';
+  }
+  saveLocal(); renderClientes(); renderDashboard();
+  ocultarCargando(); toast('✅ Fiado marcado como cobrado');
+}
+
+async function eliminarCliente(id) {
+  if (!confirm('¿Eliminar este cliente?')) return;
+  mostrarCargando('Eliminando...');
+  await supa.delete('clientes', id);
+  clientes = clientes.filter(c => c.id !== id);
+  saveLocal(); renderClientes(); ocultarCargando();
+  toast('🗑 Cliente eliminado');
+}
+
+// ═══════════════════════════════════════
+// EXPORTAR / IMPORTAR
+// ═══════════════════════════════════════
+function exportarDatos() {
+  const datos = { ventas, productos, clientes, exportado: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const fecha = new Date().toLocaleDateString('es-PE').replace(/\//g,'-');
+  a.download = `tiendita-backup-${fecha}.json`;
+  a.click();
+  toast('💾 Datos exportados correctamente');
+}
+
+function importarDatos(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const datos = JSON.parse(e.target.result);
+      if (!datos.ventas || !datos.productos || !datos.clientes) {
+        toast('❌ Archivo inválido', true); return;
+      }
+      if (!confirm(`¿Importar datos?\n\nEsto reemplazará tus datos actuales con:\n• ${datos.ventas.length} ventas\n• ${datos.productos.length} productos\n• ${datos.clientes.length} clientes\n\nExportado el: ${datos.exportado ? new Date(datos.exportado).toLocaleString('es-PE') : 'desconocido'}`)) return;
+      ventas = datos.ventas;
+      productos = datos.productos;
+      clientes = datos.clientes;
+      save();
+      renderDashboard();
+      toast('✅ Datos importados correctamente');
+    } catch {
+      toast('❌ Error al leer el archivo', true);
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+async function init() {
+  await cargarDatos();
+  renderDashboard();
+}
+init();
+</script>
+</body>
+</html>
