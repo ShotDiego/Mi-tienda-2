@@ -684,24 +684,105 @@
 
 <div id="toast"></div>
 
+<!-- LOADING OVERLAY -->
+<div id="loading-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,14,12,.85);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:14px;">
+  <div style="width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite"></div>
+  <div id="loading-msg" style="font-size:.9rem;color:var(--muted)">Cargando...</div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
 <script>
 // ═══════════════════════════════════════
-// ALMACENAMIENTO (localStorage)
+// CONFIGURACIÓN SUPABASE
+// Reemplaza estos dos valores con los tuyos
 // ═══════════════════════════════════════
-const db = {
-  get: (k) => JSON.parse(localStorage.getItem(k) || '[]'),
-  set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
+const SUPABASE_URL = 'TU_SUPABASE_URL';
+const SUPABASE_KEY = 'TU_SUPABASE_ANON_KEY';
+
+// ═══════════════════════════════════════
+// CLIENTE SUPABASE (sin librería externa)
+// ═══════════════════════════════════════
+const supa = {
+  async get(tabla) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${tabla}?order=id`, {
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    });
+    return r.ok ? r.json() : [];
+  },
+  async insert(tabla, datos) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${tabla}`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json', Prefer: 'return=representation' },
+      body: JSON.stringify(datos)
+    });
+    return r.ok ? r.json() : null;
+  },
+  async update(tabla, id, datos) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${tabla}?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json', Prefer: 'return=representation' },
+      body: JSON.stringify(datos)
+    });
+    return r.ok ? r.json() : null;
+  },
+  async delete(tabla, id) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${tabla}?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    });
+    return r.ok;
+  }
 };
 
-let ventas = db.get('ventas');
-let productos = db.get('productos');
-let clientes = db.get('clientes');
+// ═══════════════════════════════════════
+// ESTADO EN MEMORIA (cache local)
+// ═══════════════════════════════════════
+let ventas = [];
+let productos = [];
+let clientes = [];
+let _cargando = false;
 
-function save() {
-  db.set('ventas', ventas);
-  db.set('productos', productos);
-  db.set('clientes', clientes);
+function mostrarCargando(msg = 'Cargando...') {
+  document.getElementById('loading-overlay').style.display = 'flex';
+  document.getElementById('loading-msg').textContent = msg;
 }
+function ocultarCargando() {
+  document.getElementById('loading-overlay').style.display = 'none';
+}
+
+async function cargarDatos() {
+  mostrarCargando('Conectando con la nube...');
+  try {
+    [ventas, productos, clientes] = await Promise.all([
+      supa.get('ventas'),
+      supa.get('productos'),
+      supa.get('clientes')
+    ]);
+    // Parsear lineas y otros campos JSON almacenados como texto
+    ventas = ventas.map(v => ({
+      ...v,
+      lineas: typeof v.lineas === 'string' ? JSON.parse(v.lineas) : (v.lineas || [])
+    }));
+  } catch(e) {
+    toast('⚠️ Sin conexión, usando datos locales', true);
+    ventas = JSON.parse(localStorage.getItem('ventas') || '[]');
+    productos = JSON.parse(localStorage.getItem('productos') || '[]');
+    clientes = JSON.parse(localStorage.getItem('clientes') || '[]');
+  }
+  ocultarCargando();
+}
+
+// Cache local como respaldo
+function saveLocal() {
+  localStorage.setItem('ventas', JSON.stringify(ventas));
+  localStorage.setItem('productos', JSON.stringify(productos));
+  localStorage.setItem('clientes', JSON.stringify(clientes));
+}
+
+// save() ahora es no-op (cada operación guarda directo en Supabase)
+function save() { saveLocal(); }
 
 // ═══════════════════════════════════════
 // NAVEGACIÓN
@@ -969,7 +1050,7 @@ function calcularTotal() {
   document.getElementById('total-venta').textContent = fmt(total);
 }
 
-function guardarVenta() {
+async function guardarVenta() {
   const fecha = document.getElementById('venta-fecha').value;
   const clienteId = document.getElementById('venta-cliente').value;
   const metodoPago = document.getElementById('venta-pago').value;
@@ -981,22 +1062,33 @@ function guardarVenta() {
   if (!fecha) { toast('Selecciona una fecha', true); return; }
 
   const total = lineasValidas.reduce((s,l) => s + l.cantidad * l.precio, 0);
-  const venta = {
-    id: Date.now(),
-    fecha, clienteId, metodoPago, estado, notas,
-    lineas: lineasValidas, total
+  const ventaNueva = {
+    fecha, clienteId: clienteId || null, metodoPago, estado, notas,
+    lineas: JSON.stringify(lineasValidas), total
   };
 
-  // Descontar stock
-  lineasValidas.forEach(l => {
-    const p = productos.find(p => p.nombre.toLowerCase() === l.nombre.toLowerCase());
-    if (p) { p.stock = Math.max(0, (p.stock||0) - l.cantidad); }
-  });
-
-  ventas.push(venta);
-  save();
-  limpiarVenta();
-  toast('✅ Venta guardada correctamente');
+  mostrarCargando('Guardando venta...');
+  const resultado = await supa.insert('ventas', ventaNueva);
+  if (resultado && resultado[0]) {
+    const v = { ...resultado[0], lineas: lineasValidas };
+    // Descontar stock
+    for (const l of lineasValidas) {
+      const p = productos.find(p => p.nombre.toLowerCase() === l.nombre.toLowerCase());
+      if (p) {
+        const nuevoStock = Math.max(0, (p.stock||0) - l.cantidad);
+        await supa.update('productos', p.id, { stock: nuevoStock });
+        p.stock = nuevoStock;
+      }
+    }
+    ventas.push(v);
+    saveLocal();
+    limpiarVenta();
+    ocultarCargando();
+    toast('✅ Venta guardada correctamente');
+  } else {
+    ocultarCargando();
+    toast('❌ Error al guardar la venta', true);
+  }
 }
 
 function limpiarVenta() {
@@ -1052,27 +1144,32 @@ function editarVenta(id) {
   document.getElementById('modal-venta').classList.add('open');
 }
 
-function guardarEditVenta() {
+async function guardarEditVenta() {
   const v = ventas.find(v => v.id === editVentaId);
   if (!v) return;
-  v.estado = document.getElementById('edit-estado').value;
-  v.notas = document.getElementById('edit-notas').value;
-  save(); renderVentas();
-  cerrarModal('modal-venta');
+  const nuevoEstado = document.getElementById('edit-estado').value;
+  const nuevasNotas = document.getElementById('edit-notas').value;
+  mostrarCargando('Guardando...');
+  await supa.update('ventas', v.id, { estado: nuevoEstado, notas: nuevasNotas });
+  v.estado = nuevoEstado; v.notas = nuevasNotas;
+  saveLocal(); renderVentas();
+  ocultarCargando(); cerrarModal('modal-venta');
   toast('✅ Venta actualizada');
 }
 
-function eliminarVenta(id) {
+async function eliminarVenta(id) {
   if (!confirm('¿Eliminar esta venta?')) return;
+  mostrarCargando('Eliminando...');
+  await supa.delete('ventas', id);
   ventas = ventas.filter(v => v.id !== id);
-  save(); renderVentas();
+  saveLocal(); renderVentas(); ocultarCargando();
   toast('🗑 Venta eliminada');
 }
 
 // ═══════════════════════════════════════
 // INVENTARIO
 // ═══════════════════════════════════════
-function guardarProducto() {
+async function guardarProducto() {
   const nombre = document.getElementById('prod-nombre').value.trim();
   const categoria = document.getElementById('prod-categoria').value;
   const precio = parseFloat(document.getElementById('prod-precio').value)||0;
@@ -1081,13 +1178,19 @@ function guardarProducto() {
   const costo = parseFloat(document.getElementById('prod-costo').value)||0;
 
   if (!nombre) { toast('Escribe el nombre del producto', true); return; }
+  if (productos.find(p => p.nombre.toLowerCase() === nombre.toLowerCase())) {
+    toast('Ya existe un producto con ese nombre', true); return;
+  }
 
-  const existe = productos.find(p => p.nombre.toLowerCase() === nombre.toLowerCase());
-  if (existe) { toast('Ya existe un producto con ese nombre', true); return; }
-
-  productos.push({ id: Date.now(), nombre, categoria, precio, stock, stockMin, costo });
-  save(); renderInventario(); limpiarProducto();
-  toast('📦 Producto guardado');
+  mostrarCargando('Guardando producto...');
+  const resultado = await supa.insert('productos', { nombre, categoria, precio, stock, stockMin, costo });
+  if (resultado && resultado[0]) {
+    productos.push(resultado[0]);
+    saveLocal(); renderInventario(); limpiarProducto();
+    ocultarCargando(); toast('📦 Producto guardado');
+  } else {
+    ocultarCargando(); toast('❌ Error al guardar', true);
+  }
 }
 
 function limpiarProducto() {
@@ -1121,36 +1224,45 @@ function renderInventario() {
   }).join('') : '<tr><td colspan="7"><div class="empty"><div class="empty-icon">📦</div><div class="empty-text">No hay productos</div></div></td></tr>';
 }
 
-function editarStock(id) {
+async function editarStock(id) {
   const p = productos.find(p => p.id === id);
   if (!p) return;
   const nuevo = prompt(`Stock actual de "${p.nombre}": ${p.stock}\n\nNuevo stock:`);
   if (nuevo === null) return;
   const n = parseInt(nuevo);
   if (isNaN(n)) { toast('Número inválido', true); return; }
-  p.stock = n;
-  save(); renderInventario();
+  mostrarCargando('Actualizando stock...');
+  await supa.update('productos', p.id, { stock: n });
+  p.stock = n; saveLocal(); renderInventario(); ocultarCargando();
   toast(`📦 Stock de "${p.nombre}" actualizado a ${n}`);
 }
 
-function eliminarProducto(id) {
+async function eliminarProducto(id) {
   if (!confirm('¿Eliminar este producto?')) return;
+  mostrarCargando('Eliminando...');
+  await supa.delete('productos', id);
   productos = productos.filter(p => p.id !== id);
-  save(); renderInventario();
+  saveLocal(); renderInventario(); ocultarCargando();
   toast('🗑 Producto eliminado');
 }
 
 // ═══════════════════════════════════════
 // CLIENTES
 // ═══════════════════════════════════════
-function guardarCliente() {
+async function guardarCliente() {
   const nombre = document.getElementById('cli-nombre').value.trim();
   const tel = document.getElementById('cli-tel').value.trim();
   const notas = document.getElementById('cli-notas').value.trim();
   if (!nombre) { toast('Escribe el nombre del cliente', true); return; }
-  clientes.push({ id: Date.now(), nombre, tel, notas });
-  save(); renderClientes(); limpiarCliente();
-  toast('👤 Cliente guardado');
+  mostrarCargando('Guardando cliente...');
+  const resultado = await supa.insert('clientes', { nombre, tel, notas });
+  if (resultado && resultado[0]) {
+    clientes.push(resultado[0]);
+    saveLocal(); renderClientes(); limpiarCliente();
+    ocultarCargando(); toast('👤 Cliente guardado');
+  } else {
+    ocultarCargando(); toast('❌ Error al guardar', true);
+  }
 }
 
 function limpiarCliente() {
@@ -1189,22 +1301,25 @@ function renderClientes() {
     </tr>`).join('') : '<tr><td colspan="7"><div class="empty"><div class="empty-icon">👥</div><div class="empty-text">No hay clientes</div></div></td></tr>';
 }
 
-function marcarFiadoPagado(clienteId) {
+async function marcarFiadoPagado(clienteId) {
   if (!confirm('¿Marcar todos los fiados de este cliente como cobrados?')) return;
-  ventas.forEach(v => {
-    if (v.clienteId == clienteId && v.metodoPago === 'fiado' && !v.fiadoPagado) {
-      v.fiadoPagado = true;
-      v.estado = 'completada';
-    }
-  });
-  save(); renderClientes(); renderDashboard();
-  toast('✅ Fiado marcado como cobrado');
+  mostrarCargando('Actualizando...');
+  const fiadosPendientes = ventas.filter(v =>
+    v.clienteId == clienteId && v.metodoPago === 'fiado' && !v.fiadoPagado);
+  for (const v of fiadosPendientes) {
+    await supa.update('ventas', v.id, { fiadoPagado: true, estado: 'completada' });
+    v.fiadoPagado = true; v.estado = 'completada';
+  }
+  saveLocal(); renderClientes(); renderDashboard();
+  ocultarCargando(); toast('✅ Fiado marcado como cobrado');
 }
 
-function eliminarCliente(id) {
+async function eliminarCliente(id) {
   if (!confirm('¿Eliminar este cliente?')) return;
+  mostrarCargando('Eliminando...');
+  await supa.delete('clientes', id);
   clientes = clientes.filter(c => c.id !== id);
-  save(); renderClientes();
+  saveLocal(); renderClientes(); ocultarCargando();
   toast('🗑 Cliente eliminado');
 }
 
@@ -1250,7 +1365,11 @@ function importarDatos(input) {
 // ═══════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════
-renderDashboard();
+async function init() {
+  await cargarDatos();
+  renderDashboard();
+}
+init();
 </script>
 </body>
 </html>
