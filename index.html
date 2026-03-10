@@ -326,6 +326,9 @@
   <button class="nav-item" onclick="showPage('clientes')">
     <span class="nav-icon">👥</span><span>Clientes</span>
   </button>
+  <button class="nav-item" onclick="showPage('compras')">
+    <span class="nav-icon">🛍️</span><span>Compras</span>
+  </button>
   <div class="sidebar-footer">
     <button class="btn btn-ghost btn-sm" onclick="exportarDatos()" style="width:100%;margin-bottom:6px;justify-content:center">💾 Exportar datos</button>
     <button class="btn btn-ghost btn-sm" onclick="document.getElementById('importar-input').click()" style="width:100%;justify-content:center">📂 Importar datos</button>
@@ -362,6 +365,19 @@
         <div class="stat-label">Total clientes</div>
         <div class="stat-value" id="stat-clientes">0</div>
         <div class="stat-hint">registrados</div>
+      </div>
+    </div>
+    <!-- Fila stock + compras -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+      <div class="card" style="border-left:3px solid var(--green);margin-bottom:0">
+        <div class="stat-label" style="margin-bottom:4px;">📦 Valor total en stock (a costo)</div>
+        <div style="font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;color:var(--green)" id="stat-valor-stock">S/0.00</div>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:4px" id="stat-valor-stock-venta">A precio venta: S/0.00</div>
+      </div>
+      <div class="card" style="border-left:3px solid #5b8dee;margin-bottom:0">
+        <div class="stat-label" style="margin-bottom:4px;">🛍️ Total invertido en compras</div>
+        <div style="font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;color:#5b8dee" id="stat-total-compras">S/0.00</div>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:4px" id="stat-compras-count">0 compras registradas</div>
       </div>
     </div>
     <!-- Fila fiados -->
@@ -581,7 +597,7 @@
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Producto</th><th>Categoría</th><th>Precio venta</th><th>Costo</th><th>Stock</th><th>Estado</th><th>Acciones</th></tr>
+            <tr><th>Producto</th><th>Categoría</th><th>Precio venta</th><th>Costo unit.</th><th>Stock</th><th>Valor stock</th><th>Estado</th><th>Acciones</th></tr>
           </thead>
           <tbody id="tabla-inventario"></tbody>
         </table>
@@ -636,6 +652,56 @@
     </div>
   </div>
 
+
+  <!-- ══════════ COMPRAS ══════════ -->
+  <div class="page" id="page-compras">
+    <div class="page-header">
+      <div class="page-title">Compras <span>🛍️</span></div>
+      <div class="page-sub">Registro de stock comprado y gasto por producto</div>
+    </div>
+    <!-- Stats rápidos -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px;">
+      <div class="stat-card blue">
+        <div class="stat-label">Total invertido</div>
+        <div class="stat-value" id="comp-stat-total">S/0.00</div>
+        <div class="stat-hint" id="comp-stat-count">0 compras</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">Este mes</div>
+        <div class="stat-value" id="comp-stat-mes">S/0.00</div>
+        <div class="stat-hint">en compras</div>
+      </div>
+      <div class="stat-card orange">
+        <div class="stat-label">Valor en stock</div>
+        <div class="stat-value" id="comp-stat-stock">S/0.00</div>
+        <div class="stat-hint">a precio de costo</div>
+      </div>
+    </div>
+    <!-- Gasto por producto -->
+    <div class="card">
+      <div class="card-title">📊 Gasto por producto</div>
+      <div id="chart-compras-prod" class="chart-bar-wrap">
+        <div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Sin compras registradas</div></div>
+      </div>
+    </div>
+    <!-- Historial -->
+    <div class="card">
+      <div class="filter-row">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="filtro-compra" placeholder="Buscar producto..." oninput="renderCompras()" style="width:100%"/>
+        </div>
+        <input type="date" id="filtro-compra-fecha" onchange="renderCompras()" style="min-width:140px;flex:1"/>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Fecha</th><th>Producto</th><th>Cantidad</th><th>Costo unit.</th><th>Total</th><th>Nota</th></tr></thead>
+          <tbody id="tabla-compras"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
 </main>
 
 <!-- MODAL EDITAR VENTA -->
@@ -657,9 +723,46 @@
     <button class="bottom-nav-item" onclick="showPage('clientes', this)">
       <span class="bnav-icon">👥</span>Clientes
     </button>
+    <button class="bottom-nav-item" onclick="showPage('compras', this)">
+      <span class="bnav-icon">🛍️</span>Compras
+    </button>
   </div>
 </nav>
 
+
+<!-- MODAL AGREGAR STOCK -->
+<div class="modal-bg" id="modal-compra">
+  <div class="modal">
+    <div class="modal-title">➕ Agregar stock</div>
+    <div id="modal-compra-prod-nombre" style="font-size:.85rem;color:var(--muted);margin-bottom:20px;"></div>
+    <div class="form-grid" style="margin-bottom:16px;">
+      <div class="form-group">
+        <label>Cantidad a agregar</label>
+        <input type="number" id="compra-cantidad" min="1" placeholder="Ej: 24"/>
+      </div>
+      <div class="form-group">
+        <label>Precio de compra unit. (S/)</label>
+        <input type="number" id="compra-costo" min="0" step="0.01" placeholder="0.00"/>
+      </div>
+      <div class="form-group">
+        <label>Fecha de compra</label>
+        <input type="date" id="compra-fecha"/>
+      </div>
+      <div class="form-group">
+        <label>Total a pagar (S/)</label>
+        <div id="compra-total-preview" style="padding:10px 14px;background:var(--surface2);border-radius:8px;color:var(--accent);font-weight:700;font-size:1rem;border:1px solid var(--border)">S/0.00</div>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:20px;">
+      <label>Nota (opcional)</label>
+      <input type="text" id="compra-nota" placeholder="Ej: compra en mayorista"/>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="guardarCompra()">💾 Guardar compra</button>
+      <button class="btn btn-ghost" onclick="cerrarModal('modal-compra')">Cancelar</button>
+    </div>
+  </div>
+</div>
 <div class="modal-bg" id="modal-venta">
   <div class="modal">
     <div class="modal-title">✏️ Editar estado de venta</div>
@@ -755,21 +858,23 @@ function ocultarCargando() {
 async function cargarDatos() {
   mostrarCargando('Conectando con la nube...');
   try {
-    [ventas, productos, clientes] = await Promise.all([
+    [ventas, productos, clientes, compras] = await Promise.all([
       supa.get('ventas'),
       supa.get('productos'),
-      supa.get('clientes')
+      supa.get('clientes'),
+      supa.get('compras')
     ]);
-    // Parsear lineas y otros campos JSON almacenados como texto
     ventas = ventas.map(v => ({
       ...v,
       lineas: typeof v.lineas === 'string' ? JSON.parse(v.lineas) : (v.lineas || [])
     }));
+    compras = compras || [];
   } catch(e) {
     toast('⚠️ Sin conexión, usando datos locales', true);
     ventas = JSON.parse(localStorage.getItem('ventas') || '[]');
     productos = JSON.parse(localStorage.getItem('productos') || '[]');
     clientes = JSON.parse(localStorage.getItem('clientes') || '[]');
+    compras = JSON.parse(localStorage.getItem('compras') || '[]');
   }
   ocultarCargando();
 }
@@ -804,6 +909,7 @@ function showPage(id, caller) {
   if (id === 'ventas') renderVentas();
   if (id === 'inventario') renderInventario();
   if (id === 'clientes') renderClientes();
+  if (id === 'compras') renderCompras();
   if (id === 'nueva-venta') initNuevaVenta();
 }
 
@@ -874,6 +980,15 @@ function renderDashboard() {
     .filter(v => v.metodoPago === 'fiado' && v.estado !== 'cancelada' && !v.fiadoPagado)
     .reduce((s,v) => s + v.total, 0);
   document.getElementById('stat-fiado-total').textContent = 'S/' + fmt(totalFiado);
+
+  // Valor en stock
+  const valorStockCosto = productos.reduce((s,p) => s + (p.stock||0) * (p.costo||0), 0);
+  const valorStockVenta = productos.reduce((s,p) => s + (p.stock||0) * (p.precio||0), 0);
+  const totalCompras = compras.reduce((s,c) => s + (c.total||0), 0);
+  document.getElementById('stat-valor-stock').textContent = 'S/' + fmt(valorStockCosto);
+  document.getElementById('stat-valor-stock-venta').textContent = 'A precio venta: S/' + fmt(valorStockVenta);
+  document.getElementById('stat-total-compras').textContent = 'S/' + fmt(totalCompras);
+  document.getElementById('stat-compras-count').textContent = compras.length + ' compras registradas';
 
   // Productos más vendidos
   const conteo = {};
@@ -1215,9 +1330,10 @@ function renderInventario() {
       <td style="color:var(--accent);font-weight:600">S/${fmt(p.precio)}</td>
       <td style="color:var(--muted)">S/${fmt(p.costo)}</td>
       <td class="${stockBajo?'stock-low':'stock-ok'}">${p.stock} ${stockBajo?'⚠️':''}</td>
+      <td style="color:var(--green);font-weight:600">S/${fmt(p.stock * (p.costo||0))}</td>
       <td>${stockBajo?'<span class="badge badge-red">Stock bajo</span>':'<span class="badge badge-green">OK</span>'}</td>
       <td style="display:flex;gap:6px">
-        <button class="btn btn-ghost btn-sm" onclick="editarStock(${p.id})">📦 Stock</button>
+        <button class="btn btn-ghost btn-sm" onclick="abrirModalCompra(${p.id})">➕ Stock</button>
         <button class="btn btn-danger btn-sm" onclick="eliminarProducto(${p.id})">🗑</button>
       </td>
     </tr>`;
@@ -1225,16 +1341,145 @@ function renderInventario() {
 }
 
 async function editarStock(id) {
-  const p = productos.find(p => p.id === id);
+  // Mantenido por compatibilidad, ahora usamos abrirModalCompra
+  abrirModalCompra(id);
+}
+
+// ═══════════════════════════════════════
+// COMPRAS — ENTRADA DE STOCK
+// ═══════════════════════════════════════
+let compras = [];
+let compraProductoId = null;
+
+async function cargarCompras() {
+  try {
+    const raw = await supa.get('compras');
+    compras = raw || [];
+  } catch(e) {
+    compras = JSON.parse(localStorage.getItem('compras') || '[]');
+  }
+}
+
+function abrirModalCompra(prodId) {
+  const p = productos.find(p => p.id == prodId);
   if (!p) return;
-  const nuevo = prompt(`Stock actual de "${p.nombre}": ${p.stock}\n\nNuevo stock:`);
-  if (nuevo === null) return;
-  const n = parseInt(nuevo);
-  if (isNaN(n)) { toast('Número inválido', true); return; }
-  mostrarCargando('Actualizando stock...');
-  await supa.update('productos', p.id, { stock: n });
-  p.stock = n; saveLocal(); renderInventario(); ocultarCargando();
-  toast(`📦 Stock de "${p.nombre}" actualizado a ${n}`);
+  compraProductoId = prodId;
+  document.getElementById('modal-compra-prod-nombre').textContent = `Producto: ${p.nombre} — Stock actual: ${p.stock} unidades`;
+  document.getElementById('compra-cantidad').value = '';
+  document.getElementById('compra-costo').value = p.costo || '';
+  document.getElementById('compra-nota').value = '';
+  // Fecha de hoy
+  const hoy = new Date();
+  hoy.setMinutes(hoy.getMinutes() - hoy.getTimezoneOffset());
+  document.getElementById('compra-fecha').value = hoy.toISOString().slice(0,10);
+  document.getElementById('compra-total-preview').textContent = 'S/0.00';
+  document.getElementById('modal-compra').classList.add('open');
+  // Calcular total en tiempo real
+  const calcTotal = () => {
+    const cant = parseFloat(document.getElementById('compra-cantidad').value)||0;
+    const cost = parseFloat(document.getElementById('compra-costo').value)||0;
+    document.getElementById('compra-total-preview').textContent = 'S/' + fmt(cant * cost);
+  };
+  document.getElementById('compra-cantidad').oninput = calcTotal;
+  document.getElementById('compra-costo').oninput = calcTotal;
+}
+
+async function guardarCompra() {
+  const p = productos.find(pr => pr.id == compraProductoId);
+  if (!p) return;
+  const cantidad = parseInt(document.getElementById('compra-cantidad').value)||0;
+  const costo = parseFloat(document.getElementById('compra-costo').value)||0;
+  const fecha = document.getElementById('compra-fecha').value;
+  const nota = document.getElementById('compra-nota').value.trim();
+
+  if (cantidad <= 0) { toast('Ingresa una cantidad válida', true); return; }
+  if (!fecha) { toast('Selecciona una fecha', true); return; }
+
+  const total = cantidad * costo;
+  const nuevaCompra = {
+    productoId: p.id,
+    productoNombre: p.nombre,
+    cantidad, costo, total, fecha, nota
+  };
+
+  mostrarCargando('Registrando compra...');
+  // Guardar compra en Supabase
+  const resCompra = await supa.insert('compras', nuevaCompra);
+  // Actualizar stock y costo del producto
+  const nuevoStock = (p.stock||0) + cantidad;
+  await supa.update('productos', p.id, { stock: nuevoStock, costo });
+  p.stock = nuevoStock;
+  p.costo = costo;
+
+  if (resCompra && resCompra[0]) {
+    compras.push(resCompra[0]);
+  } else {
+    compras.push({ ...nuevaCompra, id: Date.now() });
+  }
+
+  saveLocal();
+  localStorage.setItem('compras', JSON.stringify(compras));
+  renderInventario();
+  renderDashboard();
+  cerrarModal('modal-compra');
+  ocultarCargando();
+  toast(`✅ Se agregaron ${cantidad} unidades a "${p.nombre}"`);
+}
+
+function renderCompras() {
+  const q = (document.getElementById('filtro-compra')?.value || '').toLowerCase();
+  const fecha = document.getElementById('filtro-compra-fecha')?.value || '';
+
+  let filtradas = [...compras].sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+  if (q) filtradas = filtradas.filter(c => (c.productoNombre||'').toLowerCase().includes(q));
+  if (fecha) filtradas = filtradas.filter(c => c.fecha && c.fecha.startsWith(fecha));
+
+  // Stats
+  const totalInvertido = compras.reduce((s,c) => s + (c.total||0), 0);
+  const mesAct = new Date().getMonth(), anioAct = new Date().getFullYear();
+  const totalMes = compras.filter(c => {
+    const d = new Date(c.fecha);
+    return d.getMonth()===mesAct && d.getFullYear()===anioAct;
+  }).reduce((s,c) => s + (c.total||0), 0);
+  const valorStock = productos.reduce((s,p) => s + (p.stock||0) * (p.costo||0), 0);
+
+  const el = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val; };
+  el('comp-stat-total', 'S/' + fmt(totalInvertido));
+  el('comp-stat-count', compras.length + ' compras');
+  el('comp-stat-mes', 'S/' + fmt(totalMes));
+  el('comp-stat-stock', 'S/' + fmt(valorStock));
+
+  // Gráfica gasto por producto
+  const gastoProd = {};
+  compras.forEach(c => {
+    gastoProd[c.productoNombre] = (gastoProd[c.productoNombre]||0) + (c.total||0);
+  });
+  const topGasto = Object.entries(gastoProd).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const maxG = topGasto[0]?.[1] || 1;
+  const chartEl = document.getElementById('chart-compras-prod');
+  if (chartEl) {
+    chartEl.innerHTML = topGasto.length ? topGasto.map(([n,v]) =>
+      `<div class="bar-row">
+        <div class="bar-label" title="${n}">${n}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${(v/maxG*100).toFixed(0)}%;background:#5b8dee"></div></div>
+        <div class="bar-amount">S/${fmt(v)}</div>
+      </div>`).join('')
+      : '<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Sin compras registradas</div></div>';
+  }
+
+  // Tabla historial
+  const tbody = document.getElementById('tabla-compras');
+  if (tbody) {
+    tbody.innerHTML = filtradas.length ? filtradas.map(c => `<tr>
+      <td>${c.fecha ? new Date(c.fecha+'T12:00:00').toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'}) : '—'}</td>
+      <td style="font-weight:500">${c.productoNombre||'—'}</td>
+      <td style="color:var(--green);font-weight:600">+${c.cantidad}</td>
+      <td style="color:var(--muted)">S/${fmt(c.costo)}</td>
+      <td style="color:#5b8dee;font-weight:700">S/${fmt(c.total)}</td>
+      <td style="color:var(--muted);font-size:.85rem">${c.nota||'—'}</td>
+    </tr>`).join('')
+    : '<tr><td colspan="6"><div class="empty"><div class="empty-icon">🛍️</div><div class="empty-text">Sin compras registradas</div></div></td></tr>';
+  }
 }
 
 async function eliminarProducto(id) {
